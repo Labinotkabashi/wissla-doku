@@ -1,5 +1,7 @@
-// Speicher-Schlüssel im Browser
+// Alle Einträge werden nur lokal im Browser gespeichert
 const STORAGE_KEY = "wissla_doku_entries_v1";
+
+// ---------- Speicher-Funktionen ----------
 
 function loadEntries() {
   try {
@@ -16,7 +18,8 @@ function saveEntries(entries) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
-// Liste der gespeicherten Fotos anzeigen
+// ---------- Liste rendern ----------
+
 function renderList() {
   const container = document.getElementById("photoList");
   const entries = loadEntries();
@@ -62,7 +65,7 @@ function renderList() {
     });
 }
 
-// Eintrag löschen
+// Eintrag löschen (wird aus HTML aufgerufen)
 function deleteEntry(id) {
   const entries = loadEntries().filter((e) => e.id !== id);
   saveEntries(entries);
@@ -70,7 +73,8 @@ function deleteEntry(id) {
 }
 window.deleteEntry = deleteEntry;
 
-// GPS holen
+// ---------- GPS & Adresse ----------
+
 function getLocation() {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
@@ -93,7 +97,6 @@ function getLocation() {
   });
 }
 
-// Adresse aus Koordinaten holen (OpenStreetMap)
 async function reverseGeocode(lat, lng) {
   try {
     const url =
@@ -104,7 +107,9 @@ async function reverseGeocode(lat, lng) {
       "&zoom=18&addressdetails=1";
 
     const res = await fetch(url, {
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+      },
     });
 
     if (!res.ok) return "";
@@ -131,7 +136,8 @@ async function reverseGeocode(lat, lng) {
   }
 }
 
-// Text unten links ins Bild rendern
+// ---------- Text ins Bild rendern ----------
+
 function drawOverlayedImage(imageDataUrl, textLines) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -164,7 +170,7 @@ function drawOverlayedImage(imageDataUrl, textLines) {
       const x = 10;
       const y = canvas.height - 10;
 
-      // Hintergrundbox
+      // halbtransparente Box
       ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
       ctx.fillRect(x, y - boxHeight, boxWidth, boxHeight);
 
@@ -184,17 +190,18 @@ function drawOverlayedImage(imageDataUrl, textLines) {
   });
 }
 
-// Hauptlogik
+// ---------- Hauptlogik ----------
+
 document.addEventListener("DOMContentLoaded", () => {
   const status = document.getElementById("status");
   const fileInput = document.getElementById("photoInput");
   const commentInput = document.getElementById("comment");
-  const saveBtn = document.querySelector("button[onclick='savePhoto()']");
-  const refreshBtn = document.querySelector("button[onclick='location.reload()']");
-  const clearAllBtn = document.querySelector("button[onclick='deleteAll()']");
+  const saveBtn = document.getElementById("saveBtn");
+  const refreshBtn = document.getElementById("refreshBtn");
+  const clearAllBtn = document.getElementById("clearAllBtn");
 
-  // Speichern-Button
-  window.savePhoto = async function () {
+  // Speichern
+  saveBtn.addEventListener("click", async () => {
     status.textContent = "";
 
     const file = fileInput.files[0];
@@ -229,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const lines = [tsString, coordText, address || ""].filter(Boolean);
 
-      // Text ins Bild einbauen
+      // Text ins Bild schreiben
       dataUrl = await drawOverlayedImage(dataUrl, lines);
 
       const entry = {
@@ -247,25 +254,25 @@ document.addEventListener("DOMContentLoaded", () => {
       saveEntries(entries);
 
       status.textContent =
-        "Foto gespeichert. Zum Speichern in die Fotos-App: Bild unten antippen und länger gedrückt halten → 'Zu Fotos hinzufügen'.";
+        "Foto gespeichert. Bild unten lange gedrückt halten → 'Zu Fotos hinzufügen', um es in die Fotos-App zu speichern.";
       fileInput.value = "";
       commentInput.value = "";
       renderList();
     };
     reader.readAsDataURL(file);
-  };
+  });
 
   // Liste aktualisieren
   refreshBtn.addEventListener("click", renderList);
 
-  // Alles löschen
-  window.deleteAll = function () {
+  // Alle Einträge löschen
+  clearAllBtn.addEventListener("click", () => {
     if (confirm("Wirklich alle Einträge löschen?")) {
       localStorage.removeItem(STORAGE_KEY);
       renderList();
     }
-  };
+  });
 
-  // Start: Liste laden
+  // Beim Start Liste laden
   renderList();
 });
